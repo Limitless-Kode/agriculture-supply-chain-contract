@@ -13,6 +13,19 @@ pragma solidity ^0.8.19;
  * This contract is only required for intermediate, library-like contracts.
  */
 abstract contract Context {
+
+    mapping (address => bool) private _authorized;
+
+    modifier authorized() {
+        require(isAuthorized(_msgSender()), "Unauthorized access");
+        _;
+    }
+
+    function isAuthorized(address account) public view returns (bool) {
+        return _authorized[account];
+    }
+
+
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
     }
