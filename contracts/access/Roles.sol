@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.0;
 
 /**
  * @title Roles
@@ -16,7 +16,7 @@ library Roles {
      */
     function add(Role storage role, address account) internal {
         require(account != address(0));
-         require(!has(role, account));
+        require(!has(role, account));
 
         role.bearers[account] = true;
     }

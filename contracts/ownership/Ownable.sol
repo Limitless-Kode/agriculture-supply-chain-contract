@@ -22,12 +22,12 @@ contract Ownable is Context {
     function transferOwnership(address account) internal onlyOwner{
         address prevOwner = _owner;
         _owner = account;
-        emit OwnershipTransfered(prevOwner, account);
+        emit OwnershipTransferred(prevOwner, account);
     }
 
     function renounceOwnership() internal onlyOwner{
         transferOwnership(address(0));
     }
 
-    event OwnershipTransfered(address indexed from, address indexed to);
+    event OwnershipTransferred(address indexed from, address indexed to);
 }

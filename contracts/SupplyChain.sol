@@ -3,8 +3,19 @@ pragma solidity ^0.8.0;
 
 import "./ownership/Ownable.sol";
 import "./access/Access.sol";
+import "./utils/DataStructures.sol";
+import "./FarmProduceContract.sol";
 
 contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
+
+    address private owner;
+    FarmProduceContract farmProduceContract;
+
+    constructor(FarmProduceContract _farmProduceContract){
+        owner = _msgSender();
+        farmProduceContract = _farmProduceContract;
+    }
+
 
 
     Farm[] public farms;
@@ -15,65 +26,10 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
     //Created to easily access Supply Chain Entity Data without making expensive loops
     mapping(address => SupplyChainEntity) supplyChainEntitiesMap;
 
-    FarmProduce[] public farmProduce;
-    mapping(address => FarmProduce[]) farmersProduceMap;
-    mapping(address => FarmProduce[]) distributorsProduceMap;
-    mapping(address => FarmProduce[]) retailersProduceMap;
-    mapping(uint => FarmProduce[]) farmProduceMap;
-    mapping(uint => FarmProduce) produceMap;
-
     mapping (SupplyChainEntityType => uint) entityTypeCounter;
 
-    enum FarmProduceState {
-        FARMER_PRODUCED_FARM_PRODUCE,
-        FARMER_LISTED_PRODUCE_FOR_SALE,
-        DISTRIBUTOR_PURCHASED_PRODUCE,
-        FARMER_SHIPPED_PRODUCE_TO_DISTRIBUTOR,
-        DISTRIBUTOR_RECEIVED_PRODUCE_FROM_FARMER,
-        DISTRIBUTOR_PROCESSED_PRODUCE,
-        DISTRIBUTOR_PACKAGED_PRODUCE,
-        DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE,
-        RETAILER_PURCHASED_PRODUCE,
-        DISTRIBUTOR_SHIPPED_PRODUCE_TO_RETAILER,
-        RETAILER_RECEIVED_PRODUCE_FROM_DISTRIBUTOR,
-        RETAILER_LISTED_PRODUCE_FOR_SALE,
-        CONSUMER_PURCHASED_PRODUCE
-    }
 
-    struct Farm{
-        uint id;
-        uint sortableIndex;
-        string name;
-    }
-
-    enum SupplyChainEntityType{
-        FARMER,DISTRIBUTOR,RETAILER,CONSUMER
-    }
-
-    struct SupplyChainEntity{
-        address entity;
-        string name;
-        uint reputation;
-        SupplyChainEntityType entityType;
-    }
-
-    struct FarmProduce{
-        uint id;
-        address owner;
-        string name;
-        string description;
-        string[] images;
-        FarmProduceState state;
-        uint stock;
-        uint cost;
-        SupplyChainEntity farmer;
-        SupplyChainEntity distributor;
-        SupplyChainEntity retailer;
-        SupplyChainEntity consumer;
-        Farm farm;
-    }
-
-    function createFarm(uint _id, uint _sortableIndex, string memory _name) public onlyFarmer{
+    function createFarm(uint _id, uint _sortableIndex, bytes32 _name) public onlyFarmer{
         Farm memory farm = Farm(_id, _sortableIndex, _name);
         farms.push(farm);
         farmsMap[_id] = farm;
@@ -81,7 +37,7 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
         emit FarmCreated(_id, _name);
     }
 
-    function createSupplyChainEntity(string memory _name, uint _entityType) public isEntityType(_entityType){
+    function createSupplyChainEntity(bytes32 _name, uint _entityType) public isEntityType(_entityType){
         require(_msgSender() != address(0));
 
         SupplyChainEntityType supplyChainEntityType = uintToEntityType(_entityType);
@@ -93,9 +49,9 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
 
     // Create Farm Produce: Ensure that the creator has the farmer role
     function createFarmProduce(
-        string memory _produceName,
+        bytes32 _produceName,
         string memory _produceDescription,
-        string[] memory _images,
+        bytes32[] memory _images,
         uint _stock,
         uint _cost,
         uint _farm
@@ -119,34 +75,42 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
             farmsMap[_farm]
         );
 
-        farmersProduceMap[_msgSender()].push(_farmProduce);
-        farmProduceMap[_farm].push(_farmProduce);
-        produceMap[_produceId] = _farmProduce;
+        farmProduceContract.addFarmProduce(_farmProduce);
+        farmProduceContract.addFarmersProduceMap(_msgSender(), _farmProduce);
+        farmProduceContract.addFarmProduceMap(_farmProduce);
+        farmProduceContract.addProduceMap(_farmProduce);
     }
 
-    function listProduceForSale(uint _produceId) public canListForSale(_produceId) {
-        FarmProduce memory _farmProduce = produceMap[_produceId];
-        uint _farmProduceMapIndex = findFarmProduceIndexById(_farmProduce, farmProduceMap[_farmProduce.farm.id]);
-        SupplyChainEntity memory _supplyChainEntity = supplyChainEntitiesMap[_msgSender()];
-        FarmProduceState _produceState;
-        
-        if(_supplyChainEntity.entityType == SupplyChainEntityType.FARMER){
-            uint _farmersProduceMapIndex = findFarmProduceIndexById(_farmProduce, farmersProduceMap[_msgSender()]);
-            farmersProduceMap[_msgSender()][_farmersProduceMapIndex].state = FarmProduceState.FARMER_LISTED_PRODUCE_FOR_SALE;
-            _produceState = FarmProduceState.FARMER_LISTED_PRODUCE_FOR_SALE;
-        } else if(_supplyChainEntity.entityType == SupplyChainEntityType.DISTRIBUTOR){
-            uint _distributorsProduceMapIndex = findFarmProduceIndexById(_farmProduce, distributorsProduceMap[_msgSender()]);
-            distributorsProduceMap[_msgSender()][_distributorsProduceMapIndex].state = FarmProduceState.DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE;
-            _produceState = FarmProduceState.DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE;
-        } else{
-            uint _retailersProduceMapIndex = findFarmProduceIndexById(_farmProduce, retailersProduceMap[_msgSender()]);
-            retailersProduceMap[_msgSender()][_retailersProduceMapIndex].state = FarmProduceState.RETAILER_LISTED_PRODUCE_FOR_SALE;
-            _produceState = FarmProduceState.RETAILER_LISTED_PRODUCE_FOR_SALE;
-        }
+   function listProduceForSale(uint _produceId) public view canListForSale(_produceId) {
+       FarmProduce memory _farmProduce = farmProduceContract.getProduceMap(_produceId);
+       FarmProduce[] memory farmProduceMap = farmProduceContract.getFarmProduceMap(_farmProduce.farm.id);
+       
+       uint _farmProduceMapIndex = findFarmProduceIndexById(_farmProduce, farmProduceMap);
+       uint _farmProduceIndex = findFarmProduceIndexById(_farmProduce, farmProduceContract.getFarmProduce());
+       SupplyChainEntity memory _supplyChainEntity = supplyChainEntitiesMap[_msgSender()];
+       FarmProduceState _produceState;
 
-        produceMap[_produceId].state = _produceState;
-        farmProduceMap[_farmProduce.farm.id][_farmProduceMapIndex].state = _produceState;
-    }
+       if(_supplyChainEntity.entityType == SupplyChainEntityType.FARMER){
+           uint _farmersProduceMapIndex = findFarmProduceIndexById(_farmProduce, farmProduceContract.getFarmersProduceMap(_msgSender()));
+           farmProduceContract.getFarmersProduceMap(_msgSender())[_farmersProduceMapIndex].state = FarmProduceState.FARMER_LISTED_PRODUCE_FOR_SALE;
+           _produceState = FarmProduceState.FARMER_LISTED_PRODUCE_FOR_SALE;
+       } else if(_supplyChainEntity.entityType == SupplyChainEntityType.DISTRIBUTOR){
+           FarmProduce[] memory distributorsProduceMap = farmProduceContract.getDistributorsProduceMap(_msgSender());
+           uint _distributorsProduceMapIndex = findFarmProduceIndexById(_farmProduce, distributorsProduceMap);
+           distributorsProduceMap[_distributorsProduceMapIndex].state = FarmProduceState.DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE;
+           _produceState = FarmProduceState.DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE;
+       } else{
+           FarmProduce[] memory retailersProduceMap = farmProduceContract.getRetailersProduceMap(_msgSender());
+           uint _retailersProduceMapIndex = findFarmProduceIndexById(_farmProduce, retailersProduceMap);
+           retailersProduceMap[_retailersProduceMapIndex].state = FarmProduceState.RETAILER_LISTED_PRODUCE_FOR_SALE;
+           _produceState = FarmProduceState.RETAILER_LISTED_PRODUCE_FOR_SALE;
+       }
+
+       farmProduceContract.getProduceMap(_produceId).state = _produceState;
+       farmProduceMap[_farmProduceMapIndex].state = _produceState;
+       farmProduceContract.getFarmProduce()[_farmProduceIndex] = farmProduceMap[_produceId];
+   }
+
 
 
     // HELPER METHODS
@@ -168,15 +132,21 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
     }
 
 
+
+
     // EVENTS
-    event SupplyChainEntityCreated(uint indexed entityId, string name, uint indexed entityType);
-    event FarmCreated(uint indexed farmId, string name);
-    event FarmProduceCreated(uint indexed produceId, address indexed farmer, string produceName);
-    event FarmerListedProduceForSale(uint indexed produceId, address indexed farmer, string produceName);
+    event SupplyChainEntityCreated(uint indexed entityId, bytes32 name, uint indexed entityType);
+    event FarmCreated(uint indexed farmId, bytes32 name);
+    event FarmProduceCreated(uint indexed produceId, address indexed farmer, bytes32 produceName);
+    event FarmerListedProduceForSale(uint indexed produceId, address indexed farmer, bytes32 produceName);
+
+
+
+
 
     // MODIFIERS
     modifier canListForSale(uint _produceId){
-        FarmProduce memory _farmProduce = produceMap[_produceId];
+        FarmProduce memory _farmProduce = farmProduceContract.getProduceMap(_produceId);
         // check if produce state is FARMER_PRODUCED_FARM_PRODUCE then the method caller should be a farmer
         // else check if produce state is DISTRIBUTOR_PACKAGED_PRODUCE then the method caller should be a distributor
         // else check if produce state is RETAILER_RECEIVED_PRODUCE_FROM_DISTRIBUTOR then the method caller should be a retailer
@@ -187,7 +157,7 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
         } else if(FarmProduceState.RETAILER_RECEIVED_PRODUCE_FROM_DISTRIBUTOR == _farmProduce.state){
             require(isRetailer(_msgSender()) && _farmProduce.retailer.entity == _msgSender(), "Only the retailer who purchased this farm produce can list it for sale.");
         } else{
-            revert("Unauthorized method call");
+            require(false, "Unauthorized method call");
         }
         _;
     }
@@ -203,7 +173,7 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
     }
 
     modifier shouldRefundBalance(uint _produce, address payable recipient){
-        uint produceCost = produceMap[_produce].cost;
+        uint produceCost = farmProduceContract.getProduceMap(_produce).cost;
         uint refundAmount = msg.value - produceCost;
         if(refundAmount > 0){
             recipient.transfer(refundAmount);
@@ -212,62 +182,62 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
     }
 
     modifier isAtFarmerProducedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.FARMER_PRODUCED_FARM_PRODUCE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.FARMER_PRODUCED_FARM_PRODUCE);
         _;
     }
 
     modifier isAtFarmerListedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.FARMER_LISTED_PRODUCE_FOR_SALE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.FARMER_LISTED_PRODUCE_FOR_SALE);
         _;
     }
 
     modifier isAtDistributorPurchasedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.DISTRIBUTOR_PURCHASED_PRODUCE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.DISTRIBUTOR_PURCHASED_PRODUCE);
         _;
     }
 
     modifier isAtFarmerShippedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.FARMER_SHIPPED_PRODUCE_TO_DISTRIBUTOR);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.FARMER_SHIPPED_PRODUCE_TO_DISTRIBUTOR);
         _;
     }
 
     modifier isAtDistributorReceivedProduceState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.DISTRIBUTOR_RECEIVED_PRODUCE_FROM_FARMER);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.DISTRIBUTOR_RECEIVED_PRODUCE_FROM_FARMER);
         _;
     }
 
     modifier isAtDistributorProcessedProduceState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.DISTRIBUTOR_PROCESSED_PRODUCE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.DISTRIBUTOR_PROCESSED_PRODUCE);
         _;
     }
 
     modifier isAtDistributorPackagedProduceState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.DISTRIBUTOR_PACKAGED_PRODUCE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.DISTRIBUTOR_PACKAGED_PRODUCE);
         _;
     }
 
     modifier isAtDistributorListedProduceState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.DISTRIBUTOR_LISTED_PRODUCE_FOR_SALE);
         _;
     }
 
     modifier isAtRetailerPurchasedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.RETAILER_PURCHASED_PRODUCE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.RETAILER_PURCHASED_PRODUCE);
         _;
     }
 
     modifier isAtDistributorShippedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.DISTRIBUTOR_SHIPPED_PRODUCE_TO_RETAILER);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.DISTRIBUTOR_SHIPPED_PRODUCE_TO_RETAILER);
         _;
     }
 
     modifier isAtRetailerListedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.RETAILER_LISTED_PRODUCE_FOR_SALE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.RETAILER_LISTED_PRODUCE_FOR_SALE);
         _;
     }
 
     modifier isAtConsumerPurchasedState(uint _produce){
-        require(produceMap[_produce].state == FarmProduceState.CONSUMER_PURCHASED_PRODUCE);
+        require(farmProduceContract.getProduceMap(_produce).state == FarmProduceState.CONSUMER_PURCHASED_PRODUCE);
         _;
     }
 
