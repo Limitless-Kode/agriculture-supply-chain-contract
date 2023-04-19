@@ -7,7 +7,7 @@ import "./utils/DataStructures.sol";
 import "./FarmProduceContract.sol";
 
 contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
-
+    
     address private owner;
     FarmProduceContract farmProduceContract;
 
@@ -15,7 +15,6 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
         owner = _msgSender();
         farmProduceContract = _farmProduceContract;
     }
-
 
 
     Farm[] public farms;

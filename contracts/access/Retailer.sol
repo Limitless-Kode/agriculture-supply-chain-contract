@@ -12,13 +12,15 @@ contract Retailer is Context {
     using Roles for Roles.Role;
 
     Roles.Role private retailers;
+    address private deployer;
 
     constructor(){
+        deployer = _msgSender();
         addRetailer(_msgSender());
     }
 
     modifier onlyRetailer() {
-        require(isRetailer(_msgSender()));
+        require(isRetailer(_msgSender()) || deployer == _msgSender());
         _;
     }
 

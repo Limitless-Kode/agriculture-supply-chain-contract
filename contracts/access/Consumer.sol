@@ -12,15 +12,18 @@ contract Consumer is Context {
     using Roles for Roles.Role;
 
     Roles.Role private consumers;
+    address private deployer;
 
     constructor(){
+        deployer = _msgSender();
         addConsumer(_msgSender());
     }
 
     modifier onlyConsumer() {
-        require(isConsumer(_msgSender()));
+        require(isConsumer(_msgSender()) || deployer == _msgSender());
         _;
     }
+
 
     function addConsumer(address account) public onlyConsumer{
         require(account != address(0));

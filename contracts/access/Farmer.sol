@@ -12,13 +12,16 @@ contract Farmer is Context {
     using Roles for Roles.Role;
 
     Roles.Role private farmers;
+    address private deployer;
 
     constructor(){
+        deployer = _msgSender();
         addFarmer(_msgSender());
     }
 
+
     modifier onlyFarmer() {
-        require(isFarmer(_msgSender()));
+        require(isFarmer(_msgSender()) || deployer == _msgSender());
         _;
     }
 

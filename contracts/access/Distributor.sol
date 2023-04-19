@@ -12,15 +12,18 @@ contract Distributor is Context {
     using Roles for Roles.Role;
 
     Roles.Role private distributors;
+    address private deployer;
 
     constructor(){
+        deployer = _msgSender();
         addDistributor(_msgSender());
     }
 
     modifier onlyDistributor() {
-        require(isDistributor(_msgSender()));
+        require(isDistributor(_msgSender()) || deployer == _msgSender());
         _;
     }
+
 
     function addDistributor(address account) public onlyDistributor{
         require(account != address(0));
