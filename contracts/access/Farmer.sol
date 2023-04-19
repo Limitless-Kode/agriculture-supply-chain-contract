@@ -16,7 +16,7 @@ contract Farmer is Context {
 
     constructor(){
         deployer = _msgSender();
-        addFarmer(_msgSender());
+        addFarmer();
     }
 
 
@@ -25,7 +25,8 @@ contract Farmer is Context {
         _;
     }
 
-    function addFarmer(address account) public onlyFarmer{
+    function addFarmer() public {
+        address account = _msgSender();
         require(account != address(0));
         farmers.add(account);
 

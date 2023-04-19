@@ -16,7 +16,7 @@ contract Consumer is Context {
 
     constructor(){
         deployer = _msgSender();
-        addConsumer(_msgSender());
+        addConsumer();
     }
 
     modifier onlyConsumer() {
@@ -25,7 +25,8 @@ contract Consumer is Context {
     }
 
 
-    function addConsumer(address account) public onlyConsumer{
+    function addConsumer() public{
+         address account = _msgSender();
         require(account != address(0));
         consumers.add(account);
 

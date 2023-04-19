@@ -16,7 +16,7 @@ contract Retailer is Context {
 
     constructor(){
         deployer = _msgSender();
-        addRetailer(_msgSender());
+        addRetailer();
     }
 
     modifier onlyRetailer() {
@@ -24,7 +24,8 @@ contract Retailer is Context {
         _;
     }
 
-    function addRetailer(address account) public onlyRetailer{
+    function addRetailer() public {
+         address account = _msgSender();
         require(account != address(0));
         retailers.add(account);
 
