@@ -24,7 +24,7 @@ contract Retailer is Context {
         _;
     }
 
-    function addRetailer() public {
+    function addRetailer() internal {
          address account = _msgSender();
         require(account != address(0));
         retailers.add(account);
@@ -32,7 +32,7 @@ contract Retailer is Context {
         emit RetailerAdded(account);
     }
 
-    function renounceRetailer() public onlyRetailer{
+    function renounceRetailer() internal onlyRetailer{
         removeRetailer(_msgSender());
     }
 

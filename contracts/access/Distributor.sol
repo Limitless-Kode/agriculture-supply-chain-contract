@@ -25,7 +25,7 @@ contract Distributor is Context {
     }
 
 
-    function addDistributor() public {
+    function addDistributor() internal {
          address account = _msgSender();
         require(account != address(0));
         distributors.add(account);
@@ -33,7 +33,7 @@ contract Distributor is Context {
         emit DistributorAdded(account);
     }
 
-    function renounceDistributor() public onlyDistributor{
+    function renounceDistributor() internal onlyDistributor{
         removeDistributor(_msgSender());
     }
 

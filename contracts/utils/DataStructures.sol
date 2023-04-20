@@ -24,7 +24,6 @@ enum FarmProduceState {
 struct SupplyChainEntity{
     address entity;
     bytes32 name;
-    uint reputation;
     SupplyChainEntityType entityType;
 }
 
@@ -36,10 +35,7 @@ struct Farm{
 
 struct FarmProduce{
     uint id;
-    address owner;
-    bytes32 name;
-    string description;
-    bytes32[] images;
+    Listing listing;
     FarmProduceState state;
     uint stock;
     uint cost;
@@ -48,4 +44,12 @@ struct FarmProduce{
     SupplyChainEntity retailer;
     SupplyChainEntity consumer;
     Farm farm;
+}
+
+struct Listing{
+    uint id;
+    address owner;
+    bytes32 name;
+    string description;
+    bytes32[] images;
 }

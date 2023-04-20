@@ -25,7 +25,7 @@ contract Farmer is Context {
         _;
     }
 
-    function addFarmer() public {
+    function addFarmer() internal {
         address account = _msgSender();
         require(account != address(0));
         farmers.add(account);
@@ -33,7 +33,7 @@ contract Farmer is Context {
         emit FarmerAdded(account);
     }
 
-    function renounceFarmer() public onlyFarmer{
+    function renounceFarmer() internal onlyFarmer{
         removeFarmer(_msgSender());
     }
 

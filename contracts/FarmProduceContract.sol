@@ -13,10 +13,20 @@ contract FarmProduceContract is Ownable{
 
     FarmProduce[] farmProduce;
     mapping(address => FarmProduce[]) farmersProduceMap;
+    mapping(address => Listing[]) farmersListingMap;
     mapping(address => FarmProduce[]) distributorsProduceMap;
     mapping(address => FarmProduce[]) retailersProduceMap;
     mapping(uint => FarmProduce[]) farmProduceMap;
     mapping(uint => FarmProduce) produceMap;
+
+
+    function addFarmersListing(Listing memory _listing) public {
+        farmersListingMap[_msgSender()].push(_listing);
+    }
+
+    function getFarmersListingMap() public view returns (Listing[] memory) {
+        return farmersListingMap[_msgSender()];
+    }
 
     function addFarmProduce(FarmProduce memory _farmProduce) public {
         farmProduce.push(_farmProduce);
@@ -26,8 +36,8 @@ contract FarmProduceContract is Ownable{
         return farmProduce;
     }
 
-    function addFarmersProduceMap(address _farmer, FarmProduce memory _farmProduce) public {
-        farmersProduceMap[_farmer].push(_farmProduce);
+    function addFarmersProduceMap(FarmProduce memory _farmProduce) public {
+        farmersProduceMap[_farmProduce.farmer.entity].push(_farmProduce);
     }
 
     function getFarmersProduceMap(address _farmer) public view returns (FarmProduce[] memory) {

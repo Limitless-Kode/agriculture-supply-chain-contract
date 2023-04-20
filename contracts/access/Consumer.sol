@@ -25,7 +25,7 @@ contract Consumer is Context {
     }
 
 
-    function addConsumer() public{
+    function addConsumer() internal {
          address account = _msgSender();
         require(account != address(0));
         consumers.add(account);
@@ -33,7 +33,7 @@ contract Consumer is Context {
         emit ConsumerAdded(account);
     }
 
-    function renounceConsumer() public onlyConsumer{
+    function renounceConsumer() internal onlyConsumer{
         removeConsumer(_msgSender());
     }
 
