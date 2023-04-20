@@ -74,8 +74,11 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
         uint _listingId,
         uint _stock,
         uint _cost,
-        uint _farm
+        uint _farmId
     ) public onlyFarmer{
+        require(farmExists(_farmId), "Farm doesn't exist");
+
+        Farm memory _farm = farmsMap[_farmId];
         uint _produceId = ++entityTypeCounter[SupplyChainEntityType.FARMER];
         SupplyChainEntity memory farmer = supplyChainEntitiesMap[_msgSender()];
 
@@ -92,7 +95,7 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
             SupplyChainEntity(address(0), "", SupplyChainEntityType.DISTRIBUTOR),
             SupplyChainEntity(address(0), "", SupplyChainEntityType.RETAILER),
             SupplyChainEntity(address(0), "", SupplyChainEntityType.CONSUMER),
-            farmsMap[_farm]
+            _farm
         );
 
         farmProduceContract.addFarmProduce(_farmProduce);
@@ -147,6 +150,10 @@ contract SupplyChain is Ownable, Farmer, Distributor, Retailer, Consumer {
         require(_type <= uint(SupplyChainEntityType.CONSUMER), "Invalid value");
 
         return SupplyChainEntityType(_type);
+    }
+
+    function farmExists(uint _farmId) private view returns(bool) {
+        return farmsMap[_farmId].id > 0;
     }
 
     function findFarmProduceIndexById(FarmProduce memory _farmProduce, FarmProduce[] memory _farmProduceList) private pure returns(uint){
